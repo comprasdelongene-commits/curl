@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: curl-runner
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: CURL_RUNNER_PASSWORD
+        sync: false

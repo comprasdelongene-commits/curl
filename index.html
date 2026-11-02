@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>curl-runner</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel2:#1c232d;--border:#2a3340;--text:#e6edf3;--muted:#8b98a8;--accent:#4f9cff;--accent2:#2f6fd0;--ok:#3fb950;--warn:#d29922;--err:#f85149}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:flex}
+aside{width:320px;min-width:260px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+aside header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+aside h1{font-size:16px;margin:0;letter-spacing:.2px}
+aside h1 span{color:var(--accent)}
+#hist{overflow:auto;flex:1}
+.item{padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.item:hover{background:var(--panel2)}
+.item.active{background:var(--panel2);box-shadow:inset 3px 0 var(--accent)}
+.item .info{min-width:0;flex:1}
+.item .url{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.item .meta{color:var(--muted);font-size:12px;display:flex;gap:8px;margin-top:2px}
+.badge{font:600 11px ui-monospace,monospace;padding:2px 6px;border-radius:4px;background:#243044;color:#9ec5ff;min-width:50px;text-align:center}
+.st{font-weight:600}
+.s2{color:var(--ok)}.s3{color:var(--warn)}.s4,.s5,.s0{color:var(--err)}
+.empty{color:var(--muted);padding:24px 16px;text-align:center}
+main{flex:1;height:100vh;overflow:auto;padding:22px 28px}
+.wrap{max-width:980px;margin:0 auto}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:22px 0 8px}
+textarea,input,select{background:#0b0f14;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace;outline:none;width:100%}
+textarea:focus,input:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:110px}
+button{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent2);border-color:var(--accent2);font-weight:600}
+button.primary:hover{background:var(--accent)}
+button.danger:hover{border-color:var(--err);color:var(--err)}
+button:disabled{opacity:.5;cursor:wait}
+button.sm{padding:4px 9px;font-size:12px}
+.row{display:flex;gap:8px;align-items:center}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.hrow{display:flex;gap:8px;margin-bottom:6px}
+.hrow input:first-child{flex:0 0 32%}
+.x{flex:0 0 auto;padding:0 10px}
+.warn{background:#2b2210;border:1px solid #5a4614;color:#e3b341;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px}
+.err{background:#2d1517;border:1px solid #6b2226;color:#ff8b85;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px}
+.stat{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.stat b{font-size:18px}
+.pill{color:var(--muted)}
+pre{background:#0b0f14;border:1px solid var(--border);border-radius:8px;padding:12px;margin:0;overflow:auto;max-height:480px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-all}
+.tabs{display:flex;gap:4px;margin-bottom:8px}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;color:var(--muted);padding:6px 12px}
+.tab.on{color:var(--text);border-bottom-color:var(--accent)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.hint{color:var(--muted);font-size:12px;margin-top:6px}
+.det dt{color:var(--muted);font-size:12px;margin-top:10px}
+.det dd{margin:2px 0 0}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--panel2);border:1px solid var(--border);padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+.topbar{display:none}
+@media(max-width:800px){
+ body{display:block}
+ .topbar{display:flex;position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--border);padding:10px 14px;align-items:center;justify-content:space-between}
+ .topbar b{font-size:16px}.topbar b span{color:var(--accent)}
+ aside{position:fixed;z-index:30;top:0;left:0;bottom:0;width:86%;max-width:340px;transform:translateX(-100%);transition:transform .2s;box-shadow:none}
+ body.menu aside{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)}
+ main{height:auto;padding:14px}
+ .row{flex-wrap:wrap}
+ #method{width:100%!important}
+ #url{flex:1 1 100%}
+ #send{width:100%}
+ .hrow{flex-wrap:wrap}.hrow input:first-child{flex:1 1 100%}.hrow input{flex:1 1 70%}
+ textarea,input,select{font-size:16px}
+ button{padding:10px 14px}
+ pre{max-height:360px}
+ .actions button{flex:1 1 40%}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><button id="menuBtn" aria-label="Histórico">☰ Histórico</button><b>curl<span>-runner</span></b><a href="/logout" style="color:var(--muted);font-size:13px">Sair</a></div>
+<aside>
+  <header><h1>curl<span>-runner</span></h1><span class="row"><button class="sm danger" id="clearAll" title="Limpar todo o histórico">Limpar tudo</button><a href="/logout" class="sm" style="color:var(--muted);font-size:12px;text-decoration:none;padding:4px 6px">Sair</a></span></header>
+  <div id="hist"></div>
+  <div class="hint" style="padding:8px 16px;border-top:1px solid var(--border)">Histórico salvo apenas neste navegador.</div>
+</aside>
+<main><div class="wrap">
+  <h2>1. Cole o comando curl</h2>
+  <textarea id="curl" spellcheck="false" placeholder="curl -X POST https://httpbin.org/post \&#10;  -H 'Content-Type: application/json' \&#10;  -d '{&quot;nome&quot;:&quot;Antonio&quot;}'"></textarea>
+  <div class="row" style="margin-top:8px"><button class="primary" id="parse">Interpretar curl</button><button id="newReq">Requisição em branco</button><span class="hint">Atalho: Ctrl+Enter</span></div>
+  <div id="parseMsg"></div>
+
+  <div id="editor" style="display:none">
+    <h2>2. Requisição (editável)</h2>
+    <div class="card">
+      <div class="row">
+        <select id="method" style="width:120px"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select>
+        <input id="url" placeholder="https://...">
+        <button class="primary" id="send" style="white-space:nowrap">Enviar</button>
+      </div>
+      <h2 style="margin-top:16px">Cabeçalhos</h2>
+      <div id="headers"></div>
+      <button class="sm" id="addH">+ Adicionar cabeçalho</button>
+      <h2>Corpo</h2>
+      <textarea id="body" spellcheck="false" style="min-height:120px"></textarea>
+      <div class="row" style="margin-top:8px"><button class="sm" id="fmtBody">Formatar JSON</button><button class="sm" id="copyCurl0">Copiar curl</button></div>
+    </div>
+  </div>
+
+  <div id="result"></div>
+</div></main>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let current = { curl: '', headers: [] };
+let activeId = null;
+
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 1600); }
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (r.status === 401) { location.href = '/login'; throw new Error('Sessão expirada.'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Erro ' + r.status);
+  return j;
+}
+
+/* ---- Histórico no localStorage do navegador (máx. 500) ---- */
+const LS_KEY = 'curl-runner-history-v1', MAX_HISTORY = 500, MAX_STORED_BODY = 200 * 1024;
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+function lsRead() { try { const a = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } }
+function lsWrite(list) {
+  list = list.slice(0, MAX_HISTORY);
+  while (true) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(list)); return list; }
+    catch (e) { if (!list.length) { toast('Não foi possível salvar o histórico.'); return list; } list.pop(); } // cota cheia: descarta o mais antigo
+  }
+}
+function lsAdd(request, curl, response) {
+  const r = { ...response };
+  if (r.body && r.body.length > MAX_STORED_BODY) { r.body = r.body.slice(0, MAX_STORED_BODY); r.truncated = true; }
+  const entry = { id: uid(), timestamp: new Date().toISOString(), curl: curl || '', request: { method: request.method, url: request.url, headers: request.headers || [], body: request.body || '' }, response: r };
+  lsWrite([entry, ...lsRead()]);
+  return entry;
+}
+async function runRequest(request, curl) {
+  const { response } = await api('/api/send', { method: 'POST', body: JSON.stringify({ request }) });
+  return lsAdd(request, curl, response);
+}
+const sq = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'";
+function toCurl(r) {
+  let c = 'curl';
+  if (r.method !== 'GET') c += ' -X ' + r.method;
+  c += ' ' + sq(r.url);
+  for (const h of r.headers || []) if (h.name) c += ' \\\n  -H ' + sq(h.name + ': ' + h.value);
+  if (r.body && !['GET', 'HEAD'].includes(r.method)) c += ' \\\n  --data-raw ' + sq(r.body);
+  return c;
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  toast('Copiado!');
+}
+function readForm() {
+  const headers = [...document.querySelectorAll('#headers .hrow')].map((r) => ({ name: r.children[0].value.trim(), value: r.children[1].value })).filter((h) => h.name);
+  return { method: $('#method').value, url: $('#url').value.trim(), headers, body: $('#body').value };
+}
+function addHeader(n = '', v = '') {
+  const d = document.createElement('div'); d.className = 'hrow';
+  d.innerHTML = '<input placeholder="Nome" value="' + esc(n) + '"><input placeholder="Valor" value="' + esc(v) + '"><button class="x danger sm" title="Remover">✕</button>';
+  d.querySelector('button').onclick = () => d.remove();
+  $('#headers').appendChild(d);
+}
+function fillForm(r) {
+  $('#editor').style.display = '';
+  const m = $('#method');
+  if (![...m.options].some((o) => o.value === r.method)) m.add(new Option(r.method, r.method));
+  m.value = r.method; $('#url').value = r.url; $('#body').value = r.body || '';
+  $('#headers').innerHTML = ''; (r.headers || []).forEach((h) => addHeader(h.name, h.value));
+}
+
+async function doParse() {
+  const curl = $('#curl').value;
+  $('#parseMsg').innerHTML = '';
+  try {
+    const r = await api('/api/parse', { method: 'POST', body: JSON.stringify({ curl }) });
+    current.curl = curl; fillForm(r);
+    if (r.warnings.length) $('#parseMsg').innerHTML = r.warnings.map((w) => '<div class="warn">' + esc(w) + '</div>').join('');
+  } catch (e) { $('#parseMsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+
+function statusClass(s) { return 's' + String(s)[0]; }
+function renderResponse(entry, title) {
+  const r = entry.response, q = entry.request;
+  let html = '<h2>' + title + '</h2><div class="card">';
+  if (r.error) html += '<div class="err">' + esc(r.error) + '</div>';
+  html += '<div class="stat"><span><span class="pill">Status</span> <b class="' + statusClass(r.status) + '">' + (r.status || '—') + ' ' + esc(r.statusText) + '</b></span>' +
+    '<span><span class="pill">Tempo</span> <b>' + r.timeMs + ' ms</b></span><span><span class="pill">Tamanho</span> <b>' + fmtSize(r.size) + '</b></span></div>';
+  html += '<div class="tabs"><button class="tab on" data-t="rb">Corpo da resposta</button><button class="tab" data-t="rh">Cabeçalhos (' + r.headers.length + ')</button>' +
+    (entry.id ? '<button class="tab" data-t="rq">Requisição enviada</button>' : '') + '</div>';
+  html += '<div id="rb"><pre>' + esc(r.body || '(vazio)') + '</pre>' + (r.truncated ? '<div class="hint">Corpo truncado (limite de armazenamento).</div>' : '') + '</div>';
+  html += '<div id="rh" style="display:none"><pre>' + esc(r.headers.map((h) => h.name + ': ' + h.value).join('\n') || '(nenhum)') + '</pre></div>';
+  if (entry.id) {
+    html += '<div id="rq" style="display:none"><dl class="det"><dt>Curl original</dt><dd><pre>' + esc(entry.curl || toCurl(q)) + '</pre></dd>' +
+      '<dt>Método e URL</dt><dd><pre>' + esc(q.method + ' ' + q.url) + '</pre></dd>' +
+      '<dt>Cabeçalhos</dt><dd><pre>' + esc(q.headers.map((h) => h.name + ': ' + h.value).join('\n') || '(nenhum)') + '</pre></dd>' +
+      '<dt>Corpo</dt><dd><pre>' + esc(q.body || '(vazio)') + '</pre></dd></dl></div>';
+    html += '<div class="actions"><button class="primary" id="resend">Reenviar</button><button id="copyCurl">Copiar curl</button><button id="loadEd">Editar no formulário</button><button class="danger" id="del">Excluir</button>' +
+      '<span class="hint" style="align-self:center">' + new Date(entry.timestamp).toLocaleString('pt-BR') + '</span></div>';
+  }
+  html += '</div>';
+  $('#result').innerHTML = html;
+  document.querySelectorAll('.tab').forEach((b) => b.onclick = () => {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === b));
+    ['rb', 'rh', 'rq'].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = id === b.dataset.t ? '' : 'none'; });
+  });
+  if (entry.id) {
+    $('#resend').onclick = async (ev) => { ev.target.disabled = true; ev.target.textContent = 'Reenviando…';
+      try { const e = await runRequest(entry.request, entry.curl); activeId = e.id; await loadHistory(); renderResponse(e, 'Resposta (reenviada)'); } catch (er) { toast(er.message); } };
+    $('#copyCurl').onclick = () => copy(toCurl(q));
+    $('#loadEd').onclick = () => { $('#curl').value = entry.curl || toCurl(q); current.curl = $('#curl').value; fillForm(q); window.scrollTo(0, 0); document.querySelector('main').scrollTo(0, 0); };
+    $('#del').onclick = async () => { if (!confirm('Excluir este item do histórico?')) return; lsWrite(lsRead().filter((x) => x.id !== entry.id)); activeId = null; $('#result').innerHTML = ''; loadHistory(); };
+  }
+}
+function fmtSize(n) { return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB'; }
+
+async function send() {
+  const req = readForm();
+  if (!req.url) return toast('Informe a URL.');
+  const b = $('#send'); b.disabled = true; b.textContent = 'Enviando…';
+  try {
+    const e = await runRequest(req, current.curl || toCurl(req));
+    activeId = e.id; await loadHistory(); renderResponse(e, 'Resposta');
+  } catch (e) { $('#result').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+  b.disabled = false; b.textContent = 'Enviar';
+}
+
+async function loadHistory() {
+  const list = lsRead().map((e) => ({ id: e.id, method: e.request.method, url: e.request.url, status: e.response.status, timeMs: e.response.timeMs, timestamp: e.timestamp }));
+  const box = $('#hist');
+  if (!list.length) { box.innerHTML = '<div class="empty">Nenhuma requisição ainda.</div>'; return; }
+  box.innerHTML = list.map((h) => '<div class="item' + (h.id === activeId ? ' active' : '') + '" data-id="' + h.id + '"><span class="badge">' + esc(h.method) + '</span><div class="info"><div class="url" title="' + esc(h.url) + '">' + esc(h.url) + '</div>' +
+    '<div class="meta"><span class="st ' + statusClass(h.status) + '">' + (h.status || 'erro') + '</span><span>' + h.timeMs + ' ms</span><span>' + new Date(h.timestamp).toLocaleString('pt-BR') + '</span></div></div></div>').join('');
+  box.querySelectorAll('.item').forEach((el) => el.onclick = async () => {
+    activeId = el.dataset.id;
+    const e = lsRead().find((x) => x.id === activeId);
+    if (!e) { loadHistory(); return; }
+    box.querySelectorAll('.item').forEach((x) => x.classList.toggle('active', x === el));
+    renderResponse(e, 'Detalhes do histórico');
+    document.body.classList.remove('menu');
+  });
+}
+
+$('#menuBtn').onclick = () => document.body.classList.toggle('menu');
+document.querySelector('main').addEventListener('click', () => document.body.classList.remove('menu'));
+$('#parse').onclick = doParse;
+$('#send').onclick = send;
+$('#addH').onclick = () => addHeader();
+$('#newReq').onclick = () => { current.curl = ''; fillForm({ method: 'GET', url: '', headers: [], body: '' }); };
+$('#copyCurl0').onclick = () => copy(toCurl(readForm()));
+$('#fmtBody').onclick = () => { try { $('#body').value = JSON.stringify(JSON.parse($('#body').value), null, 2); } catch { toast('O corpo não é um JSON válido.'); } };
+$('#clearAll').onclick = async () => { if (confirm('Apagar todo o histórico?')) { lsWrite([]); activeId = null; $('#result').innerHTML = ''; loadHistory(); } };
+$('#curl').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doParse(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && $('#editor').style.display !== 'none' && document.activeElement.id !== 'curl') send(); });
+loadHistory();
+</script>
+</body>
+</html>
